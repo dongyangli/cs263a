@@ -2,6 +2,7 @@ from nltk.corpus import wordnet as wn
 import mr_bag_of_words as mr_bow
 from pprint import pprint
 from nltk.corpus import sentiwordnet as swn
+from nltk.tree import *
 
 """
 	NLTK POS tag list:
@@ -34,48 +35,13 @@ from nltk.corpus import sentiwordnet as swn
 """
 
 POS_tags = dict([("JJ", 'a'), ("JJR", 'a'), ("JJS", 'a'), \
-	("NN", 'n'), ("NNS", 'n'), ("NNP", 'n'), ("NNPS", 'n'), \
+	("NN", 'n'), ("NNS", 'n'), ("NNP", 'n'), ("NNPS", 'n'), ("NP", 'n'),\
 	("RB", 'r'), ("RBR", 'r'), ("RBS", 'r'), \
-	("VB", 'v'), ("VBD", 'v'), ("VBG", 'v'),("VBN", 'v'), ("VBP", 'v'), ("VBZ", 'v')])
+	("VB", 'v'), ("VBD", 'v'), ("VBG", 'v'),("VBN", 'v'), ("VBP", 'v'), ("VBZ", 'v'), ("VP", 'v')])
+
+negations = ["not", "never", "neither", "nor", "no"]
 
 
-
-"""
-	used in the paper_method
-
-	@return pos, neg
-	The senti_score of the word in sentiwordnet
-"""
-def word_senti_score(word, penn_pos, neg_dependencies):
-	
-	pos = neg = 0
-	if POS_tags.has_key(penn_pos):
-		nltk_pos = POS_tags[penn_pos]
-		word_senti_synsets = swn.senti_synsets(word, nltk_pos)
-	else:
-		word_senti_synsets = swn.senti_synsets(word)
-
-	for word_senti in word_senti_synsets:
-		"""
-			Here the pos_score()/neg_score() returned is the possibility of the word 
-			to be positive/negtive 
-		"""
-		pos += word_senti.pos_score()
-		neg += word_senti.neg_score()
-	if(len(word_senti_synsets) > 0):
-		pos = pos/len(word_senti_synsets)
-		neg = neg/len(word_senti_synsets)
-
-	"""
-		use the dependencies to check negation
-		if there is negation associated with the word, reverse 
-		its pos_score and neg_score simply
-	"""
-	for dependency in neg_dependencies:
-		if word in dependency:
-			pos, neg = neg, pos # reverse polarity value
-
-	return pos, neg 
 
 """
 	@return neg_dependencies
@@ -87,36 +53,163 @@ def get_neg_dependencies(dependencies):
 			neg_dependencies.append(dependency)
 	return neg_dependencies
 
+
+def in_neg_dependencies(word, neg_dependencies):
+
+	for dependency in neg_dependencies:
+		if word == dependency[1]:
+			return True
+	return False
+
+def get_advmod_dependencies(dependencies, words):
+	advmod = []
+	for dependency in dependencies:
+		if (dependency[0] == 'advmod') and (dependency[1] in words) and (dependency[2] in words):
+			print "advmod ", dependency
+			advmod.append(dependency)
+	return advmod
+			
+
+def get_amod_dependencies(dependencies, words):
+	amod = []
+	for dependency in dependencies:
+		if (dependency[0] == 'amod') and (dependency[1] in words) and (dependency[2] in words):
+			print "amod ", dependency
+			amod.append(dependency)
+	return amod
+
+
+"""
+	used in the paper_method
+
+	@return pos, neg
+	The senti_score of the word in sentiwordnet
+"""
+def word_senti_score(word, penn_pos, neg_dependencies = None):
+	
+	max_syn = 10
+	senti_score = 0.0
+	pos = 0.0
+	neg = 0.0
+	if POS_tags.has_key(penn_pos):
+		nltk_pos = POS_tags[penn_pos]
+		if nltk_pos == 'n':
+			max_syn = 1
+		word_senti_synsets = swn.senti_synsets(word, nltk_pos)
+	else:
+		""" consider other forms other than nn, vb, adj and adv """
+		word_senti_synsets = swn.senti_synsets(word)
+
+	idx = 0
+	for word_senti in word_senti_synsets:
+		idx += 1
+		if idx > max_syn:
+			break
+		"""
+			Here the pos_score()/neg_score() returned is the possibility of the word 
+			to be positive/negtive 
+		"""
+
+		pos += word_senti.pos_score()
+		neg += word_senti.neg_score()
+	
+	if(len(word_senti_synsets) > 0):
+		pos = pos/max_syn
+		neg = neg/max_syn
+
+	"""
+	
+		return as positive if the pos_score is larger than
+		neg_score, and vice versa
+	
+	"""
+
+	if pos > neg:
+		senti_score = pos
+	else:
+		senti_score = -neg
+	return senti_score
+
+
+
+def get_labels(ptree, labels):
+	
+	""" get label for each leaf """
+
+	for subtree in ptree:
+		try:
+			subtree.label()
+		except Exception, e:
+			continue
+		else:
+			if len(subtree) == 1:
+				labels.append(subtree.label())
+			else:
+				get_labels(subtree, labels)
+	return labels
+
+
+
+def has_negation(words):
+	""" a list of negation words here """
+	return False
+
+
+
 """
 	used in tree_structure_method
 
 	@return senti_score
 """
-def phrase_score(text, dependencies = None):
+def phrase_score(ptree, dependencies = None):
 
-	neg_dependencies = get_neg_dependencies(dependencies)
-	senti_score = 0
-	pos = neg = 0
-	if text == 0:
+	#neg_dependencies = get_neg_dependencies(dependencies)
+	senti_score = 0.0
+	pos = 0.0
+	neg = 0.0
+
+	amod = get_amod_dependencies(dependencies, ptree.leaves())
+	print "amod found: ", amod
+	advmod = get_advmod_dependencies(dependencies, ptree.leaves())
+	print "advmod found: ", advmod
+
+	if (not amod) and (not advmod): # for phrase without adj/nn and adv/vb
+		labels = []
+		get_labels(ptree, labels)
+		if not labels:
+			labels.append(ptree.label())
+
+		""" check labels length and leaves length """
+		if len(labels) != len(ptree.leaves()):
+			print "The length of labels is not same as the length of leaves. "
+			print labels
+			print ptree.leaves()
+			return senti_score
+
+		for i, word in enumerate(ptree.leaves()):
+			if word in negations:
+				continue
+			senti_score += word_senti_score(word, labels[i])
 		return senti_score
 
-	for word_info in text:
-		word = word_info[0]
-		info = word_info[1] #dict
-		penn_pos = info['PartOfSpeech']
-		w_pos, w_neg = word_senti_score(word, penn_pos, neg_dependencies)
-		"""
-			To be done: 
-				calculte the phrase score with help of dependencies or sth
-		"""
-		pos += w_pos
-		neg += w_neg
+	for pair in amod:
+		nn_score = word_senti_score(pair[1], "NN")
+		adj_score = word_senti_score(pair[2], "JJ")
+		if adj_score == 0:
+			print "adj_score is zero!"
+			adj_score = 1
+		senti_score += (1 - nn_score/adj_score)*(nn_score/adj_score)
 
-	if pos > neg:
-		senti_score = pos/len(text)
-	else:
-		senti_score = -neg/len(text)
+	for pair in advmod:
+		vb_score = word_senti_score(pair[1], "VB")
+		adv_score = word_senti_score(pair[2], "RB")
+		if adv_score == 0:
+			print "adv_score is zero!"
+			adv_score = 1
+		senti_score += (1 - vb_score/adv_score)*(vb_score/adv_score)
+	
 
+	print "senti score of ", ptree.leaves(), " as ", ptree.label(), " is ", senti_score
 	return senti_score
 	
 
