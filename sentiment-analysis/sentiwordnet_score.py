@@ -53,14 +53,6 @@ def get_neg_dependencies(dependencies):
 			neg_dependencies.append(dependency)
 	return neg_dependencies
 
-
-def in_neg_dependencies(word, neg_dependencies):
-
-	for dependency in neg_dependencies:
-		if word == dependency[1]:
-			return True
-	return False
-
 def get_advmod_dependencies(dependencies, words):
 	advmod = []
 	for dependency in dependencies:
@@ -146,13 +138,6 @@ def get_labels(ptree, labels):
 				labels.append(subtree.label())
 			else:
 				get_labels(subtree, labels)
-	return labels
-
-
-
-def has_negation(words):
-	""" a list of negation words here """
-	return False
 
 
 

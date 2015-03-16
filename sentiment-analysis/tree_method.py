@@ -30,7 +30,9 @@ def get_neg_dependencies(dependencies):
 	return neg_dependencies
 
 
-
+"""
+	Check if this NP/VP contains any sub NP/VP
+"""
 def is_leaf_phrase(ptree):
 	for subtree in ptree:
 		try:
@@ -46,9 +48,16 @@ def is_leaf_phrase(ptree):
 			
 	return True
 
+
+"""
+	Polarity calculation function
+	Used the negation rule table
+"""
 def polarity(first, second, has_negation = False):
+
 	polarity =  abs(first) + (1 - abs(second))*abs(second)
-	# table used here 
+
+	""" polarity table """
 	if first >= 0 and second >= 0 and has_negation:
 		return -polarity
 	elif first >= 0 and second >= 0 and not has_negation:
@@ -68,6 +77,12 @@ def polarity(first, second, has_negation = False):
 	else:
 		return first + (1 - second)*second
 
+
+
+""" 
+	Recursively merge two scores use the Polarity calculation function
+	from right to left, according to the structure of the parse tree
+"""
 
 def merge(children_scores, children_leaves, neg_dependencies):
 	
@@ -110,6 +125,12 @@ def merge(children_scores, children_leaves, neg_dependencies):
 	return merge(children_scores, children_leaves, neg_dependencies)
 
 
+
+"""
+	Merge the scores next to conjunction word according to the function of
+	of conjunction word.
+	Currently we only consider "and", "or", and "but", more will be added later
+"""
 def conjunction_merge(children_scores, children_labels, children_leaves):
 	""" find CC first, then combine it with its left and right neighbors """
 	""" from right to left """
@@ -277,7 +298,7 @@ def tree_structure_method(result):
 
 
 
-	print senti_score/len(result)
+	return senti_score/len(result)
 
 
 

@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
 	senti_score = 0
 	senti_score = tree_structure_method(result)
-	print senti_score
+	print "Final Sentiment Score: ", senti_score
 	
 
 
