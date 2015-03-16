@@ -7,7 +7,11 @@ CS263 Final Project
         launch the server:
 		cd to corenlp-python folder,
 		$python corenlp/corenlp.py
-	2) run the code(in another termimnal):
+	2) Install NLTK package http://www.nltk.org/install.html
+		then installing NLTK Data:
+		>>> import nltk
+		>>> nltk.download()
+	3) run the code(in another termimnal):
 		cd to the sentiment-analysis folder,
 		$python main.py
 
