@@ -3,6 +3,7 @@ import stanford_nlp
 import sentiwordnet_score as swn_score
 from tree_method import tree_structure_method
 from nltk.tree import *
+
 #from nltk import treetransforms
 #from copy import deepcopy
 
@@ -14,7 +15,7 @@ text4 = "It 's been done before but never so vividly or with so much passion . "
 text5 = "Unfortunately, neither Sendak nor the directors are particularly engaging or articulate ."
 text6 = "Flashy gadgets and whirling fight sequences may look cool , but they can't distract from the flawed support structure holding Equilibrium up . "
 
-texts = [text1, text2, text3, text4, text5, text6]
+texts = [text1, text2, text3, text4]
 
 # temp text
 #text = "Hello world!  It is so beautiful."
@@ -35,16 +36,21 @@ if __name__ == "__main__":
 		#pprint(result)
 
 		parsetree = Tree.fromstring(result['sentences'][0]['parsetree'])
-		#print parsetree
+
 		#original = deepcopy(parsetree)
 		#treetransforms.un_chomsky_normal_form(original)
 		#print original
-
+		print "Calculating sentiment score for {", text, "}now ..."
+		print "Parse tree of the sentence is:"
+		print parsetree
 		senti_score = 0
 		senti_score = tree_structure_method(result)
-
 		print "Final Sentiment Score: ", senti_score
+		print "--------------------------------------------------------------------------------------------------------"
 		print " \n\n\n\n\n\n\n\n\n "
+		s = raw_input()
+		if s == "q":
+			break
 	
 
 
