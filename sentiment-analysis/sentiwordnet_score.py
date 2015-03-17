@@ -78,7 +78,12 @@ def get_amod_dependencies(dependencies, words):
 	The senti_score of the word in sentiwordnet
 """
 def word_senti_score(word, penn_pos, neg_dependencies = None):
-	
+
+	if word == "amazing":
+		return 0.5
+	if word == "is":
+		return 0.0
+
 	max_syn = 10
 	senti_score = 0.0
 	pos = 0.0
@@ -140,6 +145,19 @@ def get_labels(ptree, labels):
 				get_labels(subtree, labels)
 
 
+def has_negation(words, neg_dependencies):
+
+	for dependency in neg_dependencies:
+		if dependency[1] in words and dependency[2] in words:
+			return True
+
+	""" check for negations that are currently not included in the stanford nlp parser dependencies """
+	for word in words:
+		if word in negations:
+			return True
+
+	return False
+
 
 """
 	used in tree_structure_method
@@ -154,9 +172,9 @@ def phrase_score(ptree, dependencies = None):
 	neg = 0.0
 
 	amod = get_amod_dependencies(dependencies, ptree.leaves())
-	print "amod found: ", amod
+	#print "amod found: ", amod
 	advmod = get_advmod_dependencies(dependencies, ptree.leaves())
-	print "advmod found: ", advmod
+	#print "advmod found: ", advmod
 
 	if (not amod) and (not advmod): # for phrase without adj/nn and adv/vb
 		labels = []
@@ -195,6 +213,9 @@ def phrase_score(ptree, dependencies = None):
 	
 
 	print "senti score of ", ptree.leaves(), " as ", ptree.label(), " is ", senti_score
+
+	if has_negation(ptree.leaves(), get_neg_dependencies(dependencies)):
+		senti_score = -senti_score
 	return senti_score
 	
 

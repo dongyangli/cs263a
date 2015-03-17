@@ -34,6 +34,7 @@ def get_neg_dependencies(dependencies):
 	Check if this NP/VP contains any sub NP/VP
 """
 def is_leaf_phrase(ptree):
+	"""
 	for subtree in ptree:
 		try:
 			subtree.label()
@@ -42,11 +43,13 @@ def is_leaf_phrase(ptree):
 		else:
 			#print "in is_leaf_phrase now:"
 			#print subtree.leaves(), subtree.label()
-			if(subtree.label() == "VP" or subtree.label() == "NP" or is_leaf_phrase(subtree)):
+			if(subtree.label() == "VP" or subtree.label() == "NP" or (not is_leaf_phrase(subtree))):
 				return False
 
 			
 	return True
+	"""
+	return False
 
 
 """
@@ -58,6 +61,8 @@ def polarity(first, second, has_negation = False):
 	polarity =  abs(first) + (1 - abs(second))*abs(second)
 
 	""" polarity table """
+	if has_negation:
+		print "Negation detected here."
 	if first >= 0 and second >= 0 and has_negation:
 		return -polarity
 	elif first >= 0 and second >= 0 and not has_negation:
@@ -87,7 +92,7 @@ def polarity(first, second, has_negation = False):
 def merge(children_scores, children_leaves, neg_dependencies):
 	
 	length = len(children_scores)
-	print "in merging ", children_scores
+	print "In merging ", children_scores
 	if length == 0:
 		return 0.0
 	if length == 1:
@@ -103,8 +108,8 @@ def merge(children_scores, children_leaves, neg_dependencies):
 	children_leaves.append(first_phrase.append(second_phrase))
 	has_negation = False
 	for dependency in neg_dependencies:
-		if (dependency[1] in first_phrase and dependency[2] in second_phrase)\
-		or (dependency[2] in first_phrase and dependency[1] in second_phrase):
+		if (first_phrase is not None and dependency[1] in first_phrase and second_phrase is not None and dependency[2] in second_phrase)\
+		or (first_phrase is not None and dependency[2] in first_phrase and second_phrase is not None and dependency[1] in second_phrase):
 			has_negation = True
 	""" check for negations that are currently not included in the stanford nlp parser dependencies """
 	for word in first_phrase:
@@ -138,7 +143,7 @@ def conjunction_merge(children_scores, children_labels, children_leaves):
 		if pos == "CC":
 			""" and, but, or, etc. """
 			""" other rules could be added here later """
-			print "when pos is CC ", children_leaves[i][0], " conjunction merging ... "
+			print "POS of ", children_leaves[i][0], " is CC, do conjunction merging here"
 			if children_leaves[i][0] == "and" or children_leaves[i][0] == "or": # children_leaves[i][0] in conc_same:
 				children_scores[i-1] += children_scores.pop(i) + children_scores.pop(i)
 			else: # " but " # children_leaves[i][0] in conc_contrast:
@@ -175,25 +180,32 @@ def traverse_tree(ptree, words, dependencies):
 		if ptree.height() == 2:
 			print " "
 			print " -------- leaf node --------- "
-			print ptree.label()
-			print "node: ", ptree.leaves()
-			print " -------- leaf node --------- "
+			print "POS", ptree.label()
+			print "text: ", ptree.leaves()
+			#print "text: ",
+			#for s in ptree:
+				#print s.leaves(),
+			#print " "
 			
 			
 
 			senti_score = swn_score.phrase_score(ptree, dependencies)
-			print "the score of leaf node is ", senti_score
+			print "The score of leaf node is ", senti_score
+			print " -------- leaf node --------- "
 			print " "
 			return senti_score
 		
 		if (ptree.label() == "VP" or ptree.label() == "NP") and is_leaf_phrase(ptree): 
-			""" is_leaf_phrase means no more VP or NP children in this ptree """
+			#is_leaf_phrase means no more VP or NP children in this ptree
 			
 			print " "
 			print " -------- leaf phrase --------- "
-			print ptree.label()
-			print "node: ", ptree.leaves()
-			print " -------- leaf phrase --------- "
+			print "POS", ptree.label()
+			#print "text: ", ptree.leaves()
+			print "text: ",
+			for s in ptree:
+				print s.leaves(),
+			print " "
 			#print " "
 
 			#print ptree.label(), ptree.leaves()
@@ -204,9 +216,9 @@ def traverse_tree(ptree, words, dependencies):
 			if senti_score is None:
 				print "phrase_score is None!"
 			print "the score of leaf phrase is ", senti_score
+			print " -------- leaf phrase --------- "
 			print " "
 			return senti_score
-
 
 
 		"""
@@ -250,14 +262,21 @@ def traverse_tree(ptree, words, dependencies):
 		"""
 		print " "
 		print "-----------------------------------------------------"
-		print ptree.leaves()
-		print "before merging ", children_scores
+		print "POS", ptree.label()
+		#print "text", ptree.leaves()
+		print "text: ",
+		for s in ptree:
+			if (s.label()) in punctuation_marks:
+					continue
+			print s.leaves(),
+		print " "
+		print "Before merging ", children_scores
 		conjunction_merge(children_scores, children_labels, children_leaves)
 
 
 
 		senti_score = merge(children_scores, children_leaves, get_neg_dependencies(dependencies))
-		print "senti_score returned from merge ", senti_score
+		print "senti_score returned from merging nonleaf node is ", senti_score
 		print "-----------------------------------------------------"
 		print " "
 		return senti_score
@@ -272,7 +291,7 @@ def traverse_tree(ptree, words, dependencies):
 				< 0 means negtive
 """
 def tree_structure_method(result):
-	senti_score = 0
+	senti_score = []
 	idx = 0
 	for sentence in result['sentences']:
 
@@ -294,11 +313,11 @@ def tree_structure_method(result):
 
 			I just summed them up here
 		"""
-		senti_score += score
+		senti_score.append(score)
 
 
 
-	return senti_score/len(result)
+	return senti_score
 
 
 
